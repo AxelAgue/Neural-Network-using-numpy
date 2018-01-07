@@ -56,9 +56,8 @@ class Network(object):
         #eleccion del mini batch
         for i in range(epochs):
             k = np.random.randint(0, len(train_data_labels) - mini_batch_size)
-            mini_batch = [train_data[k:k + mini_batch_size]]
-            mini_batch_labels = [train_data_labels[k:k + mini_batch_size]]
-
+            mini_batch = train_data[k:k + mini_batch_size]
+            mini_batch_labels = train_data_labels[k:k + mini_batch_size]
 
             self.GD_mini_batch(mini_batch, mini_batch_labels, eta, mini_batch_size)
             if test_data:
@@ -69,9 +68,24 @@ class Network(object):
 
 
     def GD_mini_batch(self, mini_batch, mini_batch_labels, eta, mini_batch_size):
-        nabla_b = [np.zeros(b.shape) for b in self.biases]
-        nabla_w = [np.zeros(w.shape) for w in self.weights]
+
+        zs = []
+        activations = []
+
+        for j in range(mini_batch_size):
+            s = mini_batch[j]
+            for i in range(self.num_layers - 1):
+                s = np.sum(np.multiply(self.weights[i], s) + self.biases[i], axis=1)
+                zs.append(s)
+                z = act_func(s)
+                activations.append(z)
+            return zs, activations
+
+        #nabla_b = [np.zeros(b.shape) for b in self.biases]  creo que estos dos no hacen falta
+        #nabla_w = [np.zeros(w.shape) for w in self.weights]
+
         for i in range(len(mini_batch)):
+            y = mini_batch_labels[i]
             delta_nabla_b, delta_nabla_w = self.backprop(mini_batch, mini_batch_labels, mini_batch_size)
 
 
@@ -87,31 +101,23 @@ class Network(object):
 
 
 
-    def backprop(self, mini_batch, mini_batch_labels, mini_batch_size):
+    def backprop(self, y, zs, activations):
+
+
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
 
-        zs = []
-        activations = []
 
-        for j in range(mini_batch_size):
-            s = mini_batch[j]
-            for i in range(self.num_layers - 1):
-                s = np.sum(np.multiply(self.weights[i], s) + self.biases[i], axis=1)
-                zs.append(s)
-                z = act_func(s)
-                activations.append(z)
-            return zs, activations
-            delta = (activations[-1] - mini_batch_labels[j]).mean() * act_func_prime(zs[-1])
-            nabla_b[-1] = delta
-            nabla_w[-1] = np.dot(delta, activations[-2].transpose())
-            for l in range(2, self.num_layers):
-             z = zs[-l]
-             sp = act_func_prime(z)
-             delta = np.dot(self.weights[-l + 1].transpose(), delta) * sp
-             nabla_b[-l] = delta
-             nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
-            return (nabla_b, nabla_w)
+        delta = (activations[-1] - y).mean() * act_func_prime(zs[-1])
+        nabla_b[-1] = delta
+        nabla_w[-1] = np.dot(delta, activations[-2].transpose())
+        for l in range(2, self.num_layers):
+         z = zs[-l]
+         sp = act_func_prime(z)
+         delta = np.dot(self.weights[-l + 1].transpose(), delta) * sp
+         nabla_b[-l] = delta
+         nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
+        return (nabla_b, nabla_w)
 
 
 
@@ -132,8 +138,6 @@ def act_func_prime(z):
 
 net = Network([784, 3, 10])
 net.mini_batch(10, 30, train_data_labels, train_data, 0.1)
-
-
 
 
 
