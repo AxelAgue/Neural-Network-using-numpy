@@ -26,44 +26,31 @@ class Network(object):
 
     def feedfoward(self, z):
 
-        for i in range(self.num_layers - 1):
-            z = act_func(np.sum(np.multiply(self.weights[i], z) + self.biases[i], axis=1))
+        #for i in range(self.num_layers - 1):
+        a = act_func(np.sum(np.multiply(self.weights[0], z) + self.biases[0], axis=1))
+        z = np.sum(np.multiply(self.weights[1], a) + self.biases[1], axis=1)
 
         return softmax(z)
 
 
 
 
-    def evaluate(self, test_data, test_data_labels):
-
-     c1 = [self.feedfoward(x) for x in test_data]
-     c2 = test_data_labels
-
-     prediccion_correcta = 0
-
-     for i in xrange(len(test_data)):
-         mse = ((c1[i] - c2[i]) ** 2).mean()
-
-
-         if mse <= 0:
-             prediccion_correcta += 1
-     return prediccion_correcta
 
 
 
-    def mini_batch(self, mini_batch_size, epochs, train_data_labels, train_data, eta):
+
+    def mini_batch(self, mini_batch_size, epochs, train_data_labels, train_data, eta, test_data=None, test_data_labels=None):
 
         #eleccion del mini batch
-        for i in range(epochs):
+        for j in range(epochs):
             k = np.random.randint(0, len(train_data_labels) - mini_batch_size)
             mini_batch = train_data[k:k + mini_batch_size]
             mini_batch_labels = train_data_labels[k:k + mini_batch_size]
 
             self.GD_mini_batch(mini_batch, mini_batch_labels, eta, mini_batch_size)
-            if test_data:
-                print("Epoch {0}: {1} / {2}".format(j, self.evaluate(test_data, test_data_labels), len(train_data)))
-            else:
-                print("Epoch {0} complete".format(j))
+            if test_data is not None:
+                print("Epoch {0}: {1} / {2}".format(j, self.evaluate(test_data, test_data_labels), len(test_data)))
+
 
 
 
@@ -74,15 +61,21 @@ class Network(object):
 
         for j in range(mini_batch_size):
             s = mini_batch[j]
-            for i in range(self.num_layers - 1):
-                s = np.sum(np.multiply(self.weights[i], s) + self.biases[i], axis=1)
-                zs.append(s)
-                z = act_func(s)
-                activations.append(z)
+            #for i in range(self.num_layers - 1):
+            a = np.sum(np.multiply(self.weights[0], s) + self.biases[0], axis=1)
+            zs.append(a)
+            z = act_func(a)
+            activations.append(z)
+            b = np.sum(np.multiply(self.weights[1], z) + self.biases[1], axis=1)
+            zs.append(b)
+            z1 = softmax(b)
+            activations.append(z1)
+
+
             return zs, activations
 
-        #nabla_b = [np.zeros(b.shape) for b in self.biases]  creo que estos dos no hacen falta
-        #nabla_w = [np.zeros(w.shape) for w in self.weights]
+        nabla_b = [np.zeros(b.shape) for b in self.biases]  #creo que estos dos no hacen falta
+        nabla_w = [np.zeros(w.shape) for w in self.weights]
 
         for i in range(len(mini_batch)):
             y = mini_batch_labels[i]
@@ -120,6 +113,22 @@ class Network(object):
         return (nabla_b, nabla_w)
 
 
+    def evaluate(self, test_data, test_data_labels):
+
+     c1 = [self.feedfoward(x) for x in test_data]
+     c2 = test_data_labels
+
+     prediccion_correcta = 0
+
+     for i in range(len(test_data)):
+         mse = ((c1[i] - c2[i]) ** 2).mean()
+
+
+         if mse <= 0:
+             prediccion_correcta += 1
+     return prediccion_correcta
+
+
 
 
 def softmax(x):
@@ -137,7 +146,7 @@ def act_func_prime(z):
 
 
 net = Network([784, 3, 10])
-net.mini_batch(10, 30, train_data_labels, train_data, 0.1)
+net.mini_batch(10, 15, train_data_labels, train_data, 0.01, test_data=test_data, test_data_labels=test_data_labels)
 
 
 
